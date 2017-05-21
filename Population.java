@@ -57,6 +57,24 @@ public class Population {
 		return q > temp.n?temp.n:q;
 	}
 	
+	public int[] getError(NQueen temp)
+	{
+		int [] q = new int[temp.n];
+		for(int i=0;i<temp.n;i++)
+		{
+			for(int j=i+1;j<temp.n;j++)
+			{
+				if(temp.queens[i]==temp.queens[j])
+					q[i] = 1;
+				else if (Math.abs(i-j) == Math.abs(temp.queens[i]-temp.queens[j]))
+					q[i] = 1;;
+			}
+		}
+		//int quality = temp.n-q;
+		//return quality < 0?0:quality;
+		return q;
+	}
+	
 	public NQueen calculateFitness(){
 		if(best == null || best.fitness != 0.0){
 			population[0].fitness = getQuality(population[0]);
@@ -109,11 +127,14 @@ public class Population {
 		return selectParent();
 	}
 	
+	int interval = 0;
 	public NQueen selectParent(NQueen parent1){
 		NQueen parent2 = selectParent();
-		if(parent1.equals(parent2)){
+		if(parent1.equals(parent2) && interval < 100){
+			interval++;
 			return selectParent(parent1);
 		}
+		interval = 0;
 		return selectParent();
 	}
 	
@@ -134,16 +155,41 @@ public class Population {
 	}
 	
 	public void mutation(){
+		boolean gotOne = false;
 		for(int i = 0; i < n; i++){
 			//System.out.println(population[i].fitness +"<"+ population[i].n/4);
 			//System.out.println(population[i].n*0.04);
-			if(population[i].fitness < population[i].n*0.1){
+			/*if(population[i].fitness < population[i].n*0.04){
 				//System.out.println("yes");
+				if(this.n > 10){
+					gotOne = true;
+				}else{
+					gotOne = false;
+				}
 				population[i] = generateBestNeighbor(population[i]);
-			}else{
-				population[i] = probabilisticNeighbor(population[i]);
 			}
-			
+			else if(population[i].fitness <= population[i].n*0.15){
+				population[i] = generateRandomNeighbor(population[i]);
+			}
+			else{
+				population[i] = probabilisticNeighbor(population[i]);
+			}*/
+			double probability = Math.random();
+			if(probability < 0.1){
+				population[i] = generateRandomNeighbor(population[i]);
+			}else{
+				if(population[i].fitness <= population[i].n*0.01){
+					gotOne = true;
+					
+					population[i] = generateBestNeighbor(population[i]);
+				}else if(population[i].fitness < population[i].n*0.1){
+					gotOne = true;
+					population[i] = generateErrorFixingBestNeighbor(population[i]);
+				}else{
+					population[i] = generateErrorFixingNeighbor(population[i]);
+				}
+			}
+			//population[i] = generateErrorFixingBestNeighbor(population[i]);
 			population[i].fitness = getQuality(population[i]);
 			//System.out.println(population[i]);
 			if(population[i].fitness == 0){
@@ -152,6 +198,51 @@ public class Population {
 				return;
 			}
 		}
+		if(gotOne == true && this.n > 10){
+			this.n = (int) (this.n * 0.87);
+		}
+	}
+	
+	public NQueen generateErrorFixingNeighbor(NQueen other)
+	{
+		NQueen temp = new NQueen(other);
+		temp.errors = getError(temp);
+		//System.out.println(Arrays.toString(temp.errors));
+		for(int j = 0; j < temp.n; j++){
+			if(temp.errors[j] == 1){
+				int rv = rand.nextInt(temp.n);
+				temp.queens[j] = rv;
+			}
+		}
+		return temp;
+	}
+	
+	public NQueen generateErrorFixingBestNeighbor(NQueen other)
+	{
+		NQueen temp = new NQueen(other);
+		temp.errors = getError(temp);
+		PriorityQueue<NQueen> bestp = new PriorityQueue<NQueen>();
+
+		for(int i = 0; i < temp.n; i++){
+			if(temp.errors[i] == 1){
+				for(int j = 0; j < temp.n; j++){
+					temp = new NQueen(other);
+					temp.queens[i]=j;
+					temp.fitness = getQuality(temp);
+					temp.errors = getError(temp);
+					bestp.add(temp);
+				}
+			}
+			
+		}
+
+		ArrayList<NQueen> bests = new ArrayList<NQueen>();
+		bests.add(bestp.poll());
+		while(!bestp.isEmpty() && bestp.peek().fitness == bests.get(0).fitness){
+			bests.add(bestp.poll());
+		}
+		
+		return bests.get(rand.nextInt(bests.size()));
 	}
 	
 	public NQueen probabilisticNeighbor(NQueen other){
@@ -175,27 +266,24 @@ public class Population {
 			
 			return temp;
 	}
+	
 	public NQueen generateBestNeighbor(NQueen other)
 	{
 		NQueen temp = new NQueen(other);
 		PriorityQueue<NQueen> bestp = new PriorityQueue<NQueen>();
-		//System.out.println("new best selection");
+
 		for(int i = 0; i < temp.n; i++){
 			for(int j = 0; j < temp.n; j++){
 				temp = new NQueen(other);
 				temp.queens[i]=j;
 				temp.fitness = getQuality(temp);
 				bestp.add(temp);
-				//System.out.println("\t"+temp);
 			}
 		}
-		//System.out.println("best: " + bestp.peek());
+
 		ArrayList<NQueen> bests = new ArrayList<NQueen>();
 		bests.add(bestp.poll());
-		//System.out.println("bests");
-		//System.out.println(bestp.peek().fitness + " " + bests.get(0).fitness);
 		while(!bestp.isEmpty() && bestp.peek().fitness == bests.get(0).fitness){
-			//System.out.println("\t" + bestp.peek());
 			bests.add(bestp.poll());
 		}
 		

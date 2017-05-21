@@ -5,6 +5,7 @@ import java.util.Arrays;
 public class NQueen implements Comparable<NQueen>{
 	int n;
 	int [] queens;
+	int [] errors;
 	double fitness;
 	
 	public NQueen(int n) {
@@ -21,7 +22,7 @@ public class NQueen implements Comparable<NQueen>{
 	
 	@Override
 	public String toString() {
-		return "NQueen [fitness=" + fitness + "; queens=" + Arrays.toString(queens)+ ";n=" + n + "]";
+		return "NQueen [fitness=" + fitness + ", n="+this.n+", queens=" + Arrays.toString(queens) + "]";
 	}
 	
 	@Override
