@@ -91,12 +91,25 @@ public class Population {
 		return null;
 	}
 	
-	public NQueen birth(NQueen parent1, NQueen parent2){
+	public NQueen normalBirth(NQueen parent1, NQueen parent2){
 		NQueen child1 = new NQueen(parent1.n);
 		NQueen child2 = new NQueen(parent1.n);
 		//System.out.println(parent1);
 		//System.out.println(parent2);
 		int firstPoint = rand.nextInt(parent1.n);
+		
+		if(parent1.fitness < parent1.n * 0.5 && parent1.fitness > parent1.n * 0.05){
+			parent1.errors = getError(parent1);
+			for(int j = 0; j < parent1.n; j++){
+				if(parent1.errors[j] == 1){
+					firstPoint = j;
+					break;
+				}
+			}
+			//System.out.println(Arrays.toString(parent1.errors));
+			firstPoint = rand.nextInt(firstPoint+1);
+		}
+		
 		int secondPoint = firstPoint + rand.nextInt(parent1.n-firstPoint);
 		for(int j = 0; j < child1.n; j++){
 			if(j <= firstPoint || j >= secondPoint){
@@ -111,7 +124,39 @@ public class Population {
 		child2.fitness = getQuality(child2);
 
 		if(child1.fitness > child2.fitness){
+			//System.out.println("child2 " + parent1.fitness + " " + parent2.fitness + " " + child1.fitness + " " + child2.fitness);
 			return child2;
+		}else{
+			//System.out.println("child1 " + parent1.fitness + " " + parent2.fitness + " " + child1.fitness + " " + child2.fitness);
+		}
+		return child1;
+	}
+	
+	public NQueen hybridBirth(NQueen parent1, NQueen parent2){
+		NQueen child1 = new NQueen(parent1.n);
+		NQueen child2 = new NQueen(parent1.n);
+		//System.out.println(parent1);
+		//System.out.println(parent2);
+		parent1.errors = getError(parent1);
+		parent2.errors = getError(parent2);
+		for(int j = 0; j < child1.n; j++){
+			if(parent1.errors[j] == 1 && parent2.errors[j] == 0){
+				child1.queens[j] = parent1.queens[j];
+				child2.queens[j] = parent2.queens[j];
+			}else{
+				child2.queens[j] = parent1.queens[j];
+				child1.queens[j] = parent2.queens[j];
+			}
+		}
+		
+		child1.fitness = getQuality(child1);
+		child2.fitness = getQuality(child2);
+
+		if(child1.fitness > child2.fitness){
+			//System.out.println("child2 " + parent1.fitness + " " + parent2.fitness + " " + child1.fitness + " " + child2.fitness);
+			return child2;
+		}else{
+			//System.out.println("child1 " + parent1.fitness + " " + parent2.fitness + " " + child1.fitness + " " + child2.fitness);
 		}
 		return child1;
 	}
@@ -143,7 +188,13 @@ public class Population {
 		for(int i = 0; i < n; i++){
 			NQueen parent1 = selectParent();
 			NQueen parent2 = selectParent(parent1);
-			tempPopulation[i] = birth(parent1, parent2);
+			if(parent1.fitness < parent1.n * 0.5){
+				tempPopulation[i] = hybridBirth(parent1, parent2);
+			}else{
+				//System.out.println("Hybrid");
+				tempPopulation[i] = hybridBirth(parent1, parent2);
+			}
+			
 			tempPopulation[i].fitness = getQuality(tempPopulation[i]);
 			if(tempPopulation[i].fitness == 0){
 				System.out.println("Cross");
@@ -157,39 +208,21 @@ public class Population {
 	public void mutation(){
 		boolean gotOne = false;
 		for(int i = 0; i < n; i++){
-			//System.out.println(population[i].fitness +"<"+ population[i].n/4);
-			//System.out.println(population[i].n*0.04);
-			/*if(population[i].fitness < population[i].n*0.04){
-				//System.out.println("yes");
-				if(this.n > 10){
-					gotOne = true;
-				}else{
-					gotOne = false;
-				}
-				population[i] = generateBestNeighbor(population[i]);
-			}
-			else if(population[i].fitness <= population[i].n*0.15){
-				population[i] = generateRandomNeighbor(population[i]);
-			}
-			else{
-				population[i] = probabilisticNeighbor(population[i]);
-			}*/
 			double probability = Math.random();
-			if(probability < 0.1){
+			if(probability < 0.3){
 				population[i] = generateRandomNeighbor(population[i]);
 			}else{
-				if(population[i].fitness <= population[i].n*0.01){
+				if(population[i].fitness <= population[i].n*0.01 || this.n <= 10){
 					gotOne = true;
-					
 					population[i] = generateBestNeighbor(population[i]);
-				}else if(population[i].fitness < population[i].n*0.1){
+				}else if(population[i].fitness < population[i].n*0.05 && probability < 0.5){
 					gotOne = true;
 					population[i] = generateErrorFixingBestNeighbor(population[i]);
 				}else{
 					population[i] = generateErrorFixingNeighbor(population[i]);
 				}
 			}
-			//population[i] = generateErrorFixingBestNeighbor(population[i]);
+			//population[i] = generateErrorFixingNeighbor(population[i]);
 			population[i].fitness = getQuality(population[i]);
 			//System.out.println(population[i]);
 			if(population[i].fitness == 0){
@@ -199,7 +232,7 @@ public class Population {
 			}
 		}
 		if(gotOne == true && this.n > 10){
-			this.n = (int) (this.n * 0.87);
+			this.n = (int) (this.n * 0.90);
 		}
 	}
 	
